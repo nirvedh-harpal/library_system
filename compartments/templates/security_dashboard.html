@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security Dashboard</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/security_dashboard.css' %}">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+</head>
+<body>
+    {% if messages %}
+    {% for message in messages %}
+    <div id="message-container">
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    </div>
+      {% endfor %}
+      {% endif %}
+
+      
+      <div class="container my-4">
+        <h1>Security Dashboard</h1>
+        <h2>Compartment Status</h2>
+        <div class="p-4 d-flex justify-content-end">
+            <a href="{% url 'logout' %}" class="btn btn-danger logout-btn">Logout</a>
+        </div>
+        <div class="strip">
+            <div class="d-flex">
+                <button id="all-btn" class="active">All (<span id="all-count">{{ all_count }}</span>)</button>
+                <button id="empty-btn">Empty (<span id="empty-count">{{ empty_count }}</span>)</button>
+                <button id="occupied-btn">Occupied (<span id="occupied-count">{{ occupied_count }}</span>)</button>
+            </div>
+            <input type="text" id="search-bar" placeholder="Search by compartment">
+        </div>
+        <div class="grid">
+            {% for compartment in compartments %}
+                <div class="compartment {% if compartment.is_empty %}empty{% else %}occupied{% endif %}" data-compartment-number="{{ compartment.number }}" data-compartment-id="{{ compartment.id }}" data-student-name="{% if not compartment.is_empty %}{{ compartment.student.user.username }}{% endif %}" data-roll-number="{% if not compartment.is_empty %}{{ compartment.student.roll_number }}{% endif %}">
+                    <p class="compnum">{{ compartment.number }}</p>
+                </div>
+            {% endfor %}
+        </div>
+        <!-- Forms for assign and deallocate -->
+        <div id="assign-form" class="form-popup">
+            <form action="{% url 'assign_compartment' %}" method="post" class="form-container">
+                {% csrf_token %}
+                <p id="compartment-info"></p>
+                <input type="hidden" name="compartment_number" id="assign-compartment-number">
+                <label for="roll_number"><b>Roll Number</b></label>
+                <input type="text" name="roll_number" placeholder="Enter Roll Number" required>
+                <button type="submit" class="btn">Assign</button>
+                <button type="button" class="btn cancel" onclick="closeForm()">Close</button>
+            </form>
+        </div>
+        <div id="deallocate-form" class="form-popup">
+            <form id="deallocate-form-inner" method="post" class="form-container">
+                {% csrf_token %}
+                <p id="student-info"></p>
+                <label for="otp"><b>OTP</b></label>
+                <input type="text" name="otp" placeholder="Enter OTP" required>
+                <button type="submit" class="btn">Deallocate</button>
+                <button type="button" class="btn cancel" onclick="closeForm()">Close</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            // Show assign form on clicking empty compartments
+            $('.compartment.empty').on('click', function() {
+                var compartmentNumber = $(this).data('compartment-number');
+                $('#compartment-info').html(`Compartment: ${compartmentNumber}`);
+                $('#assign-compartment-number').val(compartmentNumber);
+                $('#assign-form').show();
+            });
+
+            // Show deallocate form on clicking occupied compartments
+            $('.compartment.occupied').on('click', function() {
+                var compartmentNumber = $(this).data('compartment-number');
+                var compartmentId = $(this).data('compartment-id');
+                var studentName = $(this).data('student-name');
+                var rollNumber = $(this).data('roll-number');
+
+                $('#student-info').html(`Compartment: ${compartmentNumber} <br>Name: ${studentName}<br>Roll Number: ${rollNumber}`);
+                $('#deallocate-form-inner').attr('action', "{% url 'deallocate_compartment' 0 %}".replace('0', compartmentId));
+                $('#deallocate-form').show();
+            });
+
+                        // Filter compartments
+                        $('#all-btn').on('click', function() {
+                currentFilter = 'all';
+                $('.compartment').show();
+                $('.strip button').removeClass('active');
+                $(this).addClass('active');
+            });
+
+            $('#empty-btn').on('click', function() {
+                currentFilter = 'empty';
+                $('.compartment').hide();
+                $('.compartment.empty').show();
+                $('.strip button').removeClass('active');
+                $(this).addClass('active');
+            });
+
+            $('#occupied-btn').on('click', function() {
+                currentFilter = 'occupied';
+                $('.compartment').hide();
+                $('.compartment.occupied').show();
+                $('.strip button').removeClass('active');
+                $(this).addClass('active');
+            });
+
+            // Search compartments
+            $('#search-bar').on('keyup', function() {
+                var value = $(this).val().toLowerCase();
+                $('.compartment').filter(function() {
+                    var compartmentNumber = $(this).data('compartment-number').toString();
+                    var studentName = $(this).data('student-name') ? $(this).data('student-name').toLowerCase() : '';
+                    var rollNumber = $(this).data('roll-number') ? $(this).data('roll-number').toString() : '';
+                    $(this).toggle(
+                        compartmentNumber.indexOf(value) > -1 ||
+                        studentName.indexOf(value) > -1 ||
+                        rollNumber.indexOf(value) > -1
+                    );
+                });
+            });
+        });
+
+        function closeForm() {
+            $('.form-popup').hide();
+        }
+
+        // Close the message when clicking anywhere on the page
+        $(document).on('click', function() {
+            $('#message-container').remove();
+        });
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+</body>
+</html>
