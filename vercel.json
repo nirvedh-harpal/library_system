@@ -1,27 +1,16 @@
 {
-    "version": 2,
-    "builds": [
-      {
-        "src": "library_system/wsgi.py",
-        "use": "@vercel/python",
-        "config": { "maxLambdaSize": "15mb", "runtime": "python3.9" }
-      },
-      {
-        "src": "build_files.sh",
-        "use": "@vercel/static-build",
-        "config": {
-          "distDir": "staticfiles_build"
-        }
-      }
-    ],
-    "routes": [
-      {
-        "src": "/static/(.*)",
-        "dest": "/static/$1"
-      },
-      {
-        "src": "/(.*)",
-        "dest": "library_system/wsgi.py"
-      }
-    ]
+  "builds": [
+    {
+      "src": "build_files.sh",
+      "use": "@vercel/static-build"
+    }
+  ],
+  "routes": [
+    { "src": "/(.*)", "dest": "/" }
+  ],
+  "env": {
+    "DATABASE_URL": "postgresql://postgres:GFnUKvLbAEPzNeuKdCNZZrCcoPyrNQOD@viaduct.proxy.rlwy.net:20093/railway",
+    "SECRET_KEY": "GFnUKvLbAEPzNeuKdCNZZrCcoPyrNQOD",
+    "DEBUG": "false" 
   }
+}
